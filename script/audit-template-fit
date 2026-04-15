@@ -1,0 +1,185 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage:
+  script/audit-template-fit <target-dir>
+
+Example:
+  script/audit-template-fit /path/to/rails-app
+
+Behavior:
+  - inspects a Rails repository structure
+  - scores the fit for each available harness template
+  - prints a recommendation plus the signals that led to it
+EOF
+}
+
+if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ] || [ "$#" -lt 1 ]; then
+  usage
+  exit 0
+fi
+
+if ! command -v rg >/dev/null 2>&1; then
+  echo "ripgrep (rg) is required for script/audit-template-fit"
+  exit 1
+fi
+
+TARGET_DIR="$1"
+TARGET_DIR="$(cd "$TARGET_DIR" && pwd)"
+
+if [ ! -d "$TARGET_DIR" ]; then
+  echo "Target directory not found: $TARGET_DIR"
+  exit 1
+fi
+
+if [ ! -f "$TARGET_DIR/Gemfile" ]; then
+  echo "Warning: target directory does not look like a Rails app root because Gemfile was not found."
+fi
+
+crud_score=0
+modular_score=0
+sidekiq_score=0
+
+crud_reasons=()
+modular_reasons=()
+sidekiq_reasons=()
+
+add_reason() {
+  local array_name="$1"
+  local message="$2"
+  eval "$array_name+=(\"\$message\")"
+}
+
+has_path() {
+  [ -e "$TARGET_DIR/$1" ]
+}
+
+count_matches() {
+  local pattern="$1"
+  local path="$2"
+  rg -l "$pattern" "$TARGET_DIR/$path" 2>/dev/null | wc -l | tr -d ' '
+}
+
+if has_path "app/controllers"; then
+  crud_score=$((crud_score + 2))
+  add_reason crud_reasons "found app/controllers"
+fi
+
+if has_path "app/serializers"; then
+  crud_score=$((crud_score + 2))
+  add_reason crud_reasons "found app/serializers"
+fi
+
+if has_path "spec/requests"; then
+  crud_score=$((crud_score + 2))
+  add_reason crud_reasons "found spec/requests"
+fi
+
+if has_path "app/domains"; then
+  modular_score=$((modular_score + 4))
+  add_reason modular_reasons "found app/domains"
+fi
+
+if has_path "spec/architecture"; then
+  modular_score=$((modular_score + 2))
+  add_reason modular_reasons "found spec/architecture"
+fi
+
+domain_dir_count=0
+if has_path "app/domains"; then
+  domain_dir_count=$(find "$TARGET_DIR/app/domains" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
+fi
+if [ "$domain_dir_count" -ge 2 ]; then
+  modular_score=$((modular_score + 3))
+  add_reason modular_reasons "found $domain_dir_count top-level domains under app/domains"
+fi
+
+job_count=0
+if has_path "app/jobs"; then
+  job_count=$(find "$TARGET_DIR/app/jobs" -type f | wc -l | tr -d ' ')
+fi
+if [ "$job_count" -ge 1 ]; then
+  sidekiq_score=$((sidekiq_score + 4))
+  add_reason sidekiq_reasons "found $job_count files under app/jobs"
+fi
+
+if has_path "app/events"; then
+  sidekiq_score=$((sidekiq_score + 3))
+  add_reason sidekiq_reasons "found app/events"
+fi
+
+if has_path "spec/jobs"; then
+  sidekiq_score=$((sidekiq_score + 2))
+  add_reason sidekiq_reasons "found spec/jobs"
+fi
+
+if count=$(count_matches 'Sidekiq::Job|include Sidekiq::Worker|perform_async' "app"); [ "${count:-0}" -ge 1 ]; then
+  sidekiq_score=$((sidekiq_score + 4))
+  add_reason sidekiq_reasons "detected Sidekiq usage in app code"
+fi
+
+service_count=0
+if has_path "app/services"; then
+  service_count=$(find "$TARGET_DIR/app/services" -type f | wc -l | tr -d ' ')
+fi
+if [ "$service_count" -ge 5 ]; then
+  modular_score=$((modular_score + 1))
+  crud_score=$((crud_score + 1))
+  add_reason modular_reasons "found substantial app/services usage"
+  add_reason crud_reasons "found substantial app/services usage"
+fi
+
+controller_count=0
+if has_path "app/controllers"; then
+  controller_count=$(find "$TARGET_DIR/app/controllers" -type f -name '*_controller.rb' | wc -l | tr -d ' ')
+fi
+if [ "$controller_count" -ge 3 ]; then
+  crud_score=$((crud_score + 2))
+  add_reason crud_reasons "found $controller_count controllers"
+fi
+
+recommendation="rails-api-crud"
+best_score=$crud_score
+
+if [ "$modular_score" -gt "$best_score" ]; then
+  recommendation="rails-modular-monolith"
+  best_score=$modular_score
+fi
+
+if [ "$sidekiq_score" -gt "$best_score" ]; then
+  recommendation="rails-sidekiq-event-processing"
+  best_score=$sidekiq_score
+fi
+
+echo "Audit target: $TARGET_DIR"
+echo
+echo "Scores:"
+echo "  rails-api-crud: $crud_score"
+echo "  rails-modular-monolith: $modular_score"
+echo "  rails-sidekiq-event-processing: $sidekiq_score"
+echo
+echo "Recommended template: $recommendation"
+echo
+echo "Reasons:"
+
+case "$recommendation" in
+  rails-api-crud)
+    if [ "${#crud_reasons[@]}" -eq 0 ]; then
+      echo "  - defaulted to CRUD because stronger topology signals were not detected"
+    else
+      printf '  - %s\n' "${crud_reasons[@]}"
+    fi
+    ;;
+  rails-modular-monolith)
+    printf '  - %s\n' "${modular_reasons[@]}"
+    ;;
+  rails-sidekiq-event-processing)
+    printf '  - %s\n' "${sidekiq_reasons[@]}"
+    ;;
+esac
+
+echo
+echo "Suggested next step:"
+echo "  script/bootstrap-template $recommendation $TARGET_DIR"

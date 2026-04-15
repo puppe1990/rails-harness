@@ -17,6 +17,7 @@ O foco aqui nao e gerar um app Rails completo, e sim reunir:
 - [docs/architecture/README.md](./docs/architecture/README.md): evolucao arquitetural `v1 -> v8`
 - [docs/template-comparison-matrix.md](./docs/template-comparison-matrix.md): quando usar cada template
 - [docs/bootstrap-template.md](./docs/bootstrap-template.md): como instalar um template em um app Rails real
+- [docs/audit-template-fit.md](./docs/audit-template-fit.md): como auditar um app Rails e sugerir o template
 
 ### Templates
 
@@ -50,6 +51,13 @@ Ou use o bootstrap automatizado:
 ```bash
 chmod +x script/bootstrap-template
 script/bootstrap-template rails-api-crud ../my-rails-app
+```
+
+Ou rode uma sugestao automatica de encaixe:
+
+```bash
+chmod +x script/audit-template-fit
+script/audit-template-fit ../my-rails-app
 ```
 
 ## Objetivo pratico
