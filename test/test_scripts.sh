@@ -56,6 +56,25 @@ doctor_json="$(script/doctor-template "$tmpdir/app" rails-api-crud --json)"
 assert_eq "$(json_get "$doctor_json" '.result')" "PASS" "doctor should pass on bootstrapped CRUD app"
 assert_eq "$(json_get "$doctor_json" '.template')" "rails-api-crud" "doctor should report the expected template"
 
+echo "==> bootstrap should auto-overwrite fresh rails boilerplate"
+tmpdir_boilerplate="$(mktemp -d /tmp/rails-harness-boilerplate.XXXXXX)"
+mkdir -p "$tmpdir_boilerplate/app/app/controllers" "$tmpdir_boilerplate/app/app/models"
+touch "$tmpdir_boilerplate/app/Gemfile"
+cat > "$tmpdir_boilerplate/app/README.md" <<'EOF'
+# README
+EOF
+cat > "$tmpdir_boilerplate/app/app/controllers/application_controller.rb" <<'EOF'
+class ApplicationController < ActionController::API
+end
+EOF
+cat > "$tmpdir_boilerplate/app/app/models/application_record.rb" <<'EOF'
+class ApplicationRecord < ActiveRecord::Base
+  primary_abstract_class
+end
+EOF
+boilerplate_output="$(script/bootstrap-template rails-api-crud "$tmpdir_boilerplate/app")"
+assert_contains "$boilerplate_output" "Auto-overwriting Rails boilerplate files:" "bootstrap should auto-overwrite default rails files"
+
 echo "==> onboard on temp app"
 tmpdir_onboard="$(mktemp -d /tmp/rails-harness-onboard.XXXXXX)"
 mkdir -p "$tmpdir_onboard/app"

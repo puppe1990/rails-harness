@@ -21,6 +21,7 @@ Examples:
 Behavior:
   - copies the selected template into the target Rails app directory
   - refuses to overwrite existing files unless --force is provided
+  - auto-overwrites a small set of Rails scaffold files when they still look like fresh boilerplate
   - preserves executable bits from template scripts
 EOF
 }
@@ -73,12 +74,42 @@ while IFS= read -r relative_path; do
   TEMPLATE_FILES+=("$relative_path")
 done < <(cd "$TEMPLATE_DIR" && find . -type f | sed 's#^\./##' | sort)
 
+is_safe_boilerplate_collision() {
+  local path="$1"
+  local full_path="$TARGET_DIR/$path"
+
+  case "$path" in
+    README.md)
+      rg -q '^# README' "$full_path" 2>/dev/null
+      ;;
+    app/controllers/application_controller.rb)
+      rg -q 'class ApplicationController < ActionController::(API|Base)' "$full_path" 2>/dev/null
+      ;;
+    app/models/application_record.rb)
+      rg -q 'class ApplicationRecord < ActiveRecord::Base' "$full_path" 2>/dev/null
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
 collisions=()
+safe_collisions=()
 for relative_path in "${TEMPLATE_FILES[@]}"; do
   if [ -e "$TARGET_DIR/$relative_path" ]; then
-    collisions+=("$relative_path")
+    if is_safe_boilerplate_collision "$relative_path"; then
+      safe_collisions+=("$relative_path")
+    else
+      collisions+=("$relative_path")
+    fi
   fi
 done
+
+if [ "${#safe_collisions[@]}" -gt 0 ] && [ "$FORCE" != "--force" ]; then
+  echo "Auto-overwriting Rails boilerplate files:"
+  printf '  - %s\n' "${safe_collisions[@]}"
+fi
 
 if [ "${#collisions[@]}" -gt 0 ] && [ "$FORCE" != "--force" ]; then
   echo "Refusing to overwrite existing files in $TARGET_DIR"

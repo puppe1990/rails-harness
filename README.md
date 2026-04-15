@@ -103,6 +103,8 @@ script/doctor-template ../my-rails-app
 
 Troque `rails-api-crud` por `rails-modular-monolith` ou `rails-sidekiq-event-processing` quando o auditor ou a sua leitura da topologia apontarem outro encaixe.
 
+Para apps Rails novos, o `bootstrap` ja sabe sobrescrever com seguranca um pequeno conjunto de arquivos boilerplate, como `README.md`, `app/controllers/application_controller.rb` e `app/models/application_record.rb`, sem exigir `--force`.
+
 ## Objetivo pratico
 
 Este repositorio existe para ajudar times a:

@@ -34,6 +34,7 @@ script/bootstrap-template rails-sidekiq-event-processing ../my-rails-app --force
 - preserva permissao executavel dos scripts
 - recusa sobrescrever arquivos existentes, a menos que `--force` seja usado
 - avisa se o diretorio alvo nao parece ser a raiz de um app Rails
+- sobrescreve automaticamente um pequeno conjunto de arquivos base de um app Rails novo quando eles ainda parecem boilerplate
 
 ## Fluxo recomendado
 
