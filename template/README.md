@@ -2,6 +2,8 @@
 
 Template semi-executavel para aumentar a confianca no uso de coding agents em uma topologia especifica: `Rails API CRUD`.
 
+Compare com os outros templates em [../docs/template-comparison-matrix.md](../docs/template-comparison-matrix.md).
+
 ## Topologia alvo
 
 Este template assume um backend Rails focado em API JSON com fluxo CRUD classico:

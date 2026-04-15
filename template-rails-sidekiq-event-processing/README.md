@@ -2,6 +2,8 @@
 
 Template semi-executavel para um app Rails com processamento assincrono via jobs e eventos.
 
+Compare com os outros templates em [../docs/template-comparison-matrix.md](../docs/template-comparison-matrix.md).
+
 ## Topologia alvo
 
 Este template assume um backend Rails em que:

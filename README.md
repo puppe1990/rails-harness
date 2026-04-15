@@ -15,6 +15,7 @@ O foco aqui nao e gerar um app Rails completo, e sim reunir:
 - [docs/rails-harness.md](./docs/rails-harness.md): define o que e um `rails harness`
 - [docs/harness-maturity.md](./docs/harness-maturity.md): progressao de maturidade do harness
 - [docs/architecture/README.md](./docs/architecture/README.md): evolucao arquitetural `v1 -> v8`
+- [docs/template-comparison-matrix.md](./docs/template-comparison-matrix.md): quando usar cada template
 
 ### Templates
 
@@ -38,9 +39,10 @@ Se voce quer aplicar isso em um app Rails real:
 
 1. leia [docs/rails-harness.md](./docs/rails-harness.md)
 2. escolha o nivel de maturidade desejado em [docs/harness-maturity.md](./docs/harness-maturity.md)
-3. escolha a topologia adequada e copie o template correspondente para a raiz do app
-4. adapte `AGENTS.md`, `docs/` e `script/` para as convencoes do time
-5. rode os checks locais do template
+3. compare as topologias em [docs/template-comparison-matrix.md](./docs/template-comparison-matrix.md)
+4. escolha o template correspondente e copie para a raiz do app
+5. adapte `AGENTS.md`, `docs/` e `script/` para as convencoes do time
+6. rode os checks locais do template
 
 ## Objetivo pratico
 

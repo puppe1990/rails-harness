@@ -2,6 +2,8 @@
 
 Template semi-executavel para um `Rails modular monolith`.
 
+Compare com os outros templates em [../docs/template-comparison-matrix.md](../docs/template-comparison-matrix.md).
+
 ## Topologia alvo
 
 Este template assume um monolito Rails organizado por dominios explicitos, com fronteiras internas que precisam ser preservadas.
