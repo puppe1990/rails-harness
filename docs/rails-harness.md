@@ -158,4 +158,4 @@ Fica menos harnessable quando:
 
 ## Os templates deste repositorio
 
-Os diretorios [template](/Users/matheuspuppe/Desktop/Projetos/rails-harness/template/README.md) e [template-rails-modular-monolith](/Users/matheuspuppe/Desktop/Projetos/rails-harness/template-rails-modular-monolith/README.md) materializam esse modelo em estruturas semi-executaveis para topologias diferentes de apps Rails reais.
+Os diretorios [template](/Users/matheuspuppe/Desktop/Projetos/rails-harness/template/README.md), [template-rails-modular-monolith](/Users/matheuspuppe/Desktop/Projetos/rails-harness/template-rails-modular-monolith/README.md) e [template-rails-sidekiq-event-processing](/Users/matheuspuppe/Desktop/Projetos/rails-harness/template-rails-sidekiq-event-processing/README.md) materializam esse modelo em estruturas semi-executaveis para topologias diferentes de apps Rails reais.

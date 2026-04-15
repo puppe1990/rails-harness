@@ -22,6 +22,8 @@ O diretorio [template](./template/README.md) contem o template especializado par
 
 O diretorio [template-rails-modular-monolith](./template-rails-modular-monolith/README.md) contem o template especializado para `Rails modular monolith`.
 
+O diretorio [template-rails-sidekiq-event-processing](./template-rails-sidekiq-event-processing/README.md) contem o template especializado para `Rails + Sidekiq/event processing`.
+
 Os templates trazem:
 
 - `AGENTS.md` para guiar coding agents

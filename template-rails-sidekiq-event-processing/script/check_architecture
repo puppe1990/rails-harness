@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT_DIR"
+
+if ! command -v rg >/dev/null 2>&1; then
+  echo "ripgrep (rg) is required for script/check_architecture"
+  exit 1
+fi
+
+violations=0
+
+echo "==> checking controllers for heavy logic"
+if [ -d "app/controllers" ]; then
+  if rg -n '\.(where|joins|left_joins|pluck|find_by|find_by!|group|order|includes)\(' app/controllers; then
+    echo "Controllers should not contain query-heavy logic."
+    violations=1
+  fi
+fi
+
+echo "==> checking jobs for external IO and oversized orchestration"
+if [ -d "app/jobs" ]; then
+  if rg -n 'Net::HTTP|Faraday|HTTParty|RestClient|HTTP\.|Excon|Typhoeus' app/jobs; then
+    echo "Jobs should not own raw external IO directly."
+    violations=1
+  fi
+
+  if rg -n 'create!|update!|transaction do|publish|emit|perform_async' app/jobs; then
+    echo "Review jobs for orchestration creep. Jobs should usually delegate to services."
+  fi
+fi
+
+echo "==> checking models for external IO"
+if [ -d "app/models" ]; then
+  if rg -n 'Net::HTTP|Faraday|HTTParty|RestClient|HTTP\.|Excon|Typhoeus' app/models; then
+    echo "Models should not contain external IO."
+    violations=1
+  fi
+fi
+
+echo "==> checking events presence"
+if [ -d "app/jobs" ] && [ ! -d "app/events" ]; then
+  echo "app/events not found. If your topology uses events, keep contracts explicit."
+fi
+
+if [ "$violations" -ne 0 ]; then
+  echo "Architecture checks failed"
+  exit 1
+fi
+
+echo "Architecture checks passed"
