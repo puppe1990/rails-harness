@@ -68,6 +68,19 @@ chmod +x script/doctor-template
 script/doctor-template ../my-rails-app
 ```
 
+## Onboarding rapido
+
+Se voce quer sair do zero para um app Rails com harness instalado, este e o fluxo minimo:
+
+```bash
+chmod +x script/audit-template-fit script/bootstrap-template script/doctor-template
+script/audit-template-fit ../my-rails-app
+script/bootstrap-template rails-api-crud ../my-rails-app
+script/doctor-template ../my-rails-app
+```
+
+Troque `rails-api-crud` por `rails-modular-monolith` ou `rails-sidekiq-event-processing` quando o auditor ou a sua leitura da topologia apontarem outro encaixe.
+
 ## Objetivo pratico
 
 Este repositorio existe para ajudar times a:
