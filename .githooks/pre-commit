@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(git rev-parse --show-toplevel)"
+cd "$ROOT_DIR"
+
+echo "Running pre-commit checks"
+chmod +x test/test_scripts.sh
+test/test_scripts.sh

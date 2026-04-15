@@ -76,6 +76,20 @@ chmod +x script/onboard
 script/onboard ../my-rails-app
 ```
 
+## Qualidade do proprio repositorio
+
+O projeto tem:
+
+- CI em [`.github/workflows/ci.yml`](./.github/workflows/ci.yml)
+- pre-commit em [`.githooks/pre-commit`](./.githooks/pre-commit)
+
+Para instalar o hook local:
+
+```bash
+chmod +x script/install-git-hooks
+script/install-git-hooks
+```
+
 ## Onboarding rapido
 
 Se voce quer sair do zero para um app Rails com harness instalado, este e o fluxo minimo:

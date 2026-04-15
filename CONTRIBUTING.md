@@ -16,6 +16,8 @@ Este repositorio existe para evoluir harness templates e tooling para coding age
 4. Rode a suite local de scripts antes de abrir PR:
 
 ```bash
+chmod +x script/install-git-hooks
+script/install-git-hooks
 chmod +x test/test_scripts.sh
 test/test_scripts.sh
 ```
