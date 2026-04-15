@@ -1,0 +1,226 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+usage() {
+  cat <<'EOF'
+Usage:
+  script/doctor-template <target-dir> [template-name]
+
+Examples:
+  script/doctor-template /path/to/rails-app
+  script/doctor-template /path/to/rails-app rails-api-crud
+
+Behavior:
+  - autodetects the best-fit template if no template-name is provided
+  - validates whether the target app contains the minimum harness structure
+  - runs lightweight consistency checks for the detected or declared template
+
+Available templates:
+  rails-api-crud
+  rails-modular-monolith
+  rails-sidekiq-event-processing
+EOF
+}
+
+if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ] || [ "$#" -lt 1 ]; then
+  usage
+  exit 0
+fi
+
+if ! command -v rg >/dev/null 2>&1; then
+  echo "ripgrep (rg) is required for script/doctor-template"
+  exit 1
+fi
+
+TARGET_DIR="$1"
+TARGET_DIR="$(cd "$TARGET_DIR" && pwd)"
+DECLARED_TEMPLATE="${2:-}"
+
+if [ ! -d "$TARGET_DIR" ]; then
+  echo "Target directory not found: $TARGET_DIR"
+  exit 1
+fi
+
+detect_template() {
+  "$ROOT_DIR/script/audit-template-fit" "$TARGET_DIR" \
+    | awk -F': ' '/^Recommended template:/ {print $2}'
+}
+
+template_name="$DECLARED_TEMPLATE"
+if [ -z "$template_name" ]; then
+  template_name="$(detect_template)"
+fi
+
+case "$template_name" in
+  rails-api-crud|rails-modular-monolith|rails-sidekiq-event-processing)
+    ;;
+  *)
+    echo "Unknown template: $template_name"
+    usage
+    exit 1
+    ;;
+esac
+
+declare -a required_files
+declare -a warnings
+failures=0
+
+add_failure() {
+  echo "FAIL: $1"
+  failures=$((failures + 1))
+}
+
+add_warning() {
+  warnings+=("$1")
+}
+
+check_required_files() {
+  local path
+  for path in "${required_files[@]}"; do
+    if [ ! -e "$TARGET_DIR/$path" ]; then
+      add_failure "missing required file: $path"
+    fi
+  done
+}
+
+check_executable() {
+  local path="$1"
+  if [ -e "$TARGET_DIR/$path" ] && [ ! -x "$TARGET_DIR/$path" ]; then
+    add_failure "script is not executable: $path"
+  fi
+}
+
+check_common_harness() {
+  required_files+=(
+    "AGENTS.md"
+    "docs/architecture.md"
+    "docs/how-to-add-endpoint.md"
+    "docs/how-to-write-migration.md"
+    "docs/testing-playbook.md"
+    "script/ci-fast"
+    "script/ci-full"
+    "script/check_architecture"
+    "script/check_harness"
+  )
+}
+
+check_crud_template() {
+  required_files+=(
+    "app/controllers"
+    "app/models"
+    "spec/architecture"
+    "spec/contracts"
+  )
+
+  if [ ! -d "$TARGET_DIR/spec/requests" ]; then
+    add_warning "spec/requests not found; CRUD APIs benefit from request specs"
+  fi
+
+  if [ ! -d "$TARGET_DIR/app/serializers" ]; then
+    add_warning "app/serializers not found; ensure another response contract layer exists"
+  fi
+}
+
+check_modular_template() {
+  required_files+=(
+    "app/domains"
+    "spec/architecture"
+    "spec/contracts"
+  )
+
+  if [ ! -d "$TARGET_DIR/app/controllers/api" ]; then
+    add_warning "app/controllers/api not found; confirm your modular monolith HTTP boundary"
+  fi
+
+  local domain_count
+  domain_count=0
+  if [ -d "$TARGET_DIR/app/domains" ]; then
+    domain_count=$(find "$TARGET_DIR/app/domains" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
+  fi
+  if [ "$domain_count" -lt 2 ]; then
+    add_warning "fewer than 2 top-level domains found under app/domains"
+  fi
+}
+
+check_sidekiq_template() {
+  required_files+=(
+    "app/jobs"
+    "app/services"
+    "spec/architecture"
+    "spec/contracts"
+  )
+
+  if [ ! -d "$TARGET_DIR/app/events" ]; then
+    add_warning "app/events not found; if events are part of your topology, keep contracts explicit"
+  fi
+
+  if [ ! -d "$TARGET_DIR/spec/jobs" ]; then
+    add_warning "spec/jobs not found; async flows benefit from dedicated job specs"
+  fi
+
+  if ! rg -q 'Sidekiq::Job|include Sidekiq::Worker|perform_async' "$TARGET_DIR/app" 2>/dev/null; then
+    add_warning "Sidekiq usage not detected in app code"
+  fi
+}
+
+echo "Doctor target: $TARGET_DIR"
+echo "Expected template: $template_name"
+echo
+
+check_common_harness
+
+case "$template_name" in
+  rails-api-crud)
+    check_crud_template
+    ;;
+  rails-modular-monolith)
+    check_modular_template
+    ;;
+  rails-sidekiq-event-processing)
+    check_sidekiq_template
+    ;;
+esac
+
+check_required_files
+check_executable "script/ci-fast"
+check_executable "script/ci-full"
+check_executable "script/check_architecture"
+check_executable "script/check_harness"
+
+if [ -x "$TARGET_DIR/script/check_harness" ]; then
+  check_harness_log="$(mktemp /tmp/rails-harness-doctor-check-harness.XXXXXX)"
+  echo "Running target script/check_harness"
+  if ! (cd "$TARGET_DIR" && script/check_harness >"$check_harness_log" 2>&1); then
+    cat "$check_harness_log"
+    add_failure "target script/check_harness failed"
+  else
+    cat "$check_harness_log"
+  fi
+fi
+
+if [ -x "$TARGET_DIR/script/check_architecture" ]; then
+  check_architecture_log="$(mktemp /tmp/rails-harness-doctor-check-architecture.XXXXXX)"
+  echo "Running target script/check_architecture"
+  if ! (cd "$TARGET_DIR" && script/check_architecture >"$check_architecture_log" 2>&1); then
+    cat "$check_architecture_log"
+    add_failure "target script/check_architecture failed"
+  else
+    cat "$check_architecture_log"
+  fi
+fi
+
+echo
+if [ "${#warnings[@]}" -gt 0 ]; then
+  echo "Warnings:"
+  printf '  - %s\n' "${warnings[@]}"
+  echo
+fi
+
+if [ "$failures" -gt 0 ]; then
+  echo "Doctor result: FAIL ($failures issue(s))"
+  exit 1
+fi
+
+echo "Doctor result: PASS"
