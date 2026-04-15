@@ -16,6 +16,7 @@ O foco aqui nao e gerar um app Rails completo, e sim reunir:
 - [docs/harness-maturity.md](./docs/harness-maturity.md): progressao de maturidade do harness
 - [docs/architecture/README.md](./docs/architecture/README.md): evolucao arquitetural `v1 -> v8`
 - [docs/template-comparison-matrix.md](./docs/template-comparison-matrix.md): quando usar cada template
+- [docs/bootstrap-template.md](./docs/bootstrap-template.md): como instalar um template em um app Rails real
 
 ### Templates
 
@@ -43,6 +44,13 @@ Se voce quer aplicar isso em um app Rails real:
 4. escolha o template correspondente e copie para a raiz do app
 5. adapte `AGENTS.md`, `docs/` e `script/` para as convencoes do time
 6. rode os checks locais do template
+
+Ou use o bootstrap automatizado:
+
+```bash
+chmod +x script/bootstrap-template
+script/bootstrap-template rails-api-crud ../my-rails-app
+```
 
 ## Objetivo pratico
 

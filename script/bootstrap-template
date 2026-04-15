@@ -1,0 +1,112 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+usage() {
+  cat <<'EOF'
+Usage:
+  script/bootstrap-template <template-name> <target-dir> [--force]
+
+Available templates:
+  rails-api-crud
+  rails-modular-monolith
+  rails-sidekiq-event-processing
+
+Examples:
+  script/bootstrap-template rails-api-crud /path/to/my-app
+  script/bootstrap-template rails-modular-monolith ../my-app
+  script/bootstrap-template rails-sidekiq-event-processing ../my-app --force
+
+Behavior:
+  - copies the selected template into the target Rails app directory
+  - refuses to overwrite existing files unless --force is provided
+  - preserves executable bits from template scripts
+EOF
+}
+
+if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ] || [ "$#" -lt 2 ]; then
+  usage
+  exit 0
+fi
+
+TEMPLATE_NAME="$1"
+TARGET_DIR="$2"
+FORCE="${3:-}"
+
+case "$TEMPLATE_NAME" in
+  rails-api-crud)
+    TEMPLATE_DIR="$ROOT_DIR/template"
+    ;;
+  rails-modular-monolith)
+    TEMPLATE_DIR="$ROOT_DIR/template-rails-modular-monolith"
+    ;;
+  rails-sidekiq-event-processing)
+    TEMPLATE_DIR="$ROOT_DIR/template-rails-sidekiq-event-processing"
+    ;;
+  *)
+    echo "Unknown template: $TEMPLATE_NAME"
+    usage
+    exit 1
+    ;;
+esac
+
+if [ ! -d "$TEMPLATE_DIR" ]; then
+  echo "Template directory not found: $TEMPLATE_DIR"
+  exit 1
+fi
+
+mkdir -p "$TARGET_DIR"
+TARGET_DIR="$(cd "$TARGET_DIR" && pwd)"
+
+if [ ! -d "$TARGET_DIR" ]; then
+  echo "Target directory not found: $TARGET_DIR"
+  exit 1
+fi
+
+if [ ! -f "$TARGET_DIR/Gemfile" ]; then
+  echo "Warning: target directory does not look like a Rails app root because Gemfile was not found."
+fi
+
+TEMPLATE_FILES=()
+while IFS= read -r relative_path; do
+  TEMPLATE_FILES+=("$relative_path")
+done < <(cd "$TEMPLATE_DIR" && find . -type f | sed 's#^\./##' | sort)
+
+collisions=()
+for relative_path in "${TEMPLATE_FILES[@]}"; do
+  if [ -e "$TARGET_DIR/$relative_path" ]; then
+    collisions+=("$relative_path")
+  fi
+done
+
+if [ "${#collisions[@]}" -gt 0 ] && [ "$FORCE" != "--force" ]; then
+  echo "Refusing to overwrite existing files in $TARGET_DIR"
+  echo "Collisions:"
+  printf '  - %s\n' "${collisions[@]}"
+  echo "Re-run with --force to overwrite these files."
+  exit 1
+fi
+
+echo "Installing template '$TEMPLATE_NAME' into $TARGET_DIR"
+
+for relative_path in "${TEMPLATE_FILES[@]}"; do
+  source_path="$TEMPLATE_DIR/$relative_path"
+  target_path="$TARGET_DIR/$relative_path"
+
+  mkdir -p "$(dirname "$target_path")"
+  cp "$source_path" "$target_path"
+
+  if [ -x "$source_path" ]; then
+    chmod +x "$target_path"
+  fi
+done
+
+echo "Template installed."
+echo "Next steps:"
+echo "  1. Review AGENTS.md and docs/architecture.md"
+echo "  2. Adapt examples under app/ and spec/"
+echo "  3. Run:"
+echo "     chmod +x script/ci-fast script/ci-full script/check_harness script/check_architecture"
+echo "     script/check_harness"
+echo "     script/ci-fast"
