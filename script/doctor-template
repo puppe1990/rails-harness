@@ -6,7 +6,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 usage() {
   cat <<'EOF'
 Usage:
-  script/doctor-template <target-dir> [template-name]
+  script/doctor-template <target-dir> [template-name] [--json]
 
 Examples:
   script/doctor-template /path/to/rails-app
@@ -37,6 +37,7 @@ fi
 TARGET_DIR="$1"
 TARGET_DIR="$(cd "$TARGET_DIR" && pwd)"
 DECLARED_TEMPLATE="${2:-}"
+OUTPUT_JSON="${3:-}"
 
 if [ ! -d "$TARGET_DIR" ]; then
   echo "Target directory not found: $TARGET_DIR"
@@ -53,6 +54,11 @@ if [ -z "$template_name" ]; then
   template_name="$(detect_template)"
 fi
 
+if [ "$template_name" = "--json" ]; then
+  template_name=""
+  OUTPUT_JSON="--json"
+fi
+
 case "$template_name" in
   rails-api-crud|rails-modular-monolith|rails-sidekiq-event-processing)
     ;;
@@ -65,10 +71,14 @@ esac
 
 declare -a required_files
 declare -a warnings
+declare -a failures_list
 failures=0
 
 add_failure() {
-  echo "FAIL: $1"
+  if [ "${OUTPUT_JSON:-}" != "--json" ]; then
+    echo "FAIL: $1"
+  fi
+  failures_list+=("$1")
   failures=$((failures + 1))
 }
 
@@ -165,9 +175,11 @@ check_sidekiq_template() {
   fi
 }
 
-echo "Doctor target: $TARGET_DIR"
-echo "Expected template: $template_name"
-echo
+if [ "${OUTPUT_JSON:-}" != "--json" ]; then
+  echo "Doctor target: $TARGET_DIR"
+  echo "Expected template: $template_name"
+  echo
+fi
 
 check_common_harness
 
@@ -191,24 +203,84 @@ check_executable "script/check_harness"
 
 if [ -x "$TARGET_DIR/script/check_harness" ]; then
   check_harness_log="$(mktemp /tmp/rails-harness-doctor-check-harness.XXXXXX)"
-  echo "Running target script/check_harness"
+  if [ "${OUTPUT_JSON:-}" != "--json" ]; then
+    echo "Running target script/check_harness"
+  fi
   if ! (cd "$TARGET_DIR" && script/check_harness >"$check_harness_log" 2>&1); then
-    cat "$check_harness_log"
+    if [ "${OUTPUT_JSON:-}" != "--json" ]; then
+      cat "$check_harness_log"
+    fi
     add_failure "target script/check_harness failed"
   else
-    cat "$check_harness_log"
+    if [ "${OUTPUT_JSON:-}" != "--json" ]; then
+      cat "$check_harness_log"
+    fi
   fi
 fi
 
 if [ -x "$TARGET_DIR/script/check_architecture" ]; then
   check_architecture_log="$(mktemp /tmp/rails-harness-doctor-check-architecture.XXXXXX)"
-  echo "Running target script/check_architecture"
+  if [ "${OUTPUT_JSON:-}" != "--json" ]; then
+    echo "Running target script/check_architecture"
+  fi
   if ! (cd "$TARGET_DIR" && script/check_architecture >"$check_architecture_log" 2>&1); then
-    cat "$check_architecture_log"
+    if [ "${OUTPUT_JSON:-}" != "--json" ]; then
+      cat "$check_architecture_log"
+    fi
     add_failure "target script/check_architecture failed"
   else
-    cat "$check_architecture_log"
+    if [ "${OUTPUT_JSON:-}" != "--json" ]; then
+      cat "$check_architecture_log"
+    fi
   fi
+fi
+
+if [ "${OUTPUT_JSON:-}" = "--json" ]; then
+  result="PASS"
+  if [ "$failures" -gt 0 ]; then
+    result="FAIL"
+  fi
+  warnings_file="$(mktemp /tmp/rails-harness-doctor-warnings.XXXXXX)"
+  failures_file="$(mktemp /tmp/rails-harness-doctor-failures.XXXXXX)"
+  : >"$warnings_file"
+  : >"$failures_file"
+  if [ "${#warnings[@]}" -gt 0 ]; then
+    printf '%s\n' "${warnings[@]}" >"$warnings_file"
+  fi
+  if [ "${#failures_list[@]}" -gt 0 ]; then
+    printf '%s\n' "${failures_list[@]}" >"$failures_file"
+  fi
+  python3 - "$TARGET_DIR" "$template_name" "$result" "$failures" "$warnings_file" "$failures_file" <<'PY'
+import json
+import sys
+
+target = sys.argv[1]
+template = sys.argv[2]
+result = sys.argv[3]
+failure_count = int(sys.argv[4])
+warnings_file = sys.argv[5]
+failures_file = sys.argv[6]
+
+def read_lines(path):
+    with open(path, "r", encoding="utf-8") as handle:
+        return [line.strip() for line in handle.readlines() if line.strip()]
+
+warnings = read_lines(warnings_file)
+failures = read_lines(failures_file)
+
+print(json.dumps({
+    "target_dir": target,
+    "template": template,
+    "result": result,
+    "failure_count": failure_count,
+    "warnings": warnings,
+    "failures": failures,
+}, indent=2))
+PY
+  if [ "$failures" -gt 0 ]; then
+    exit 1
+  fi
+  exit 0
 fi
 
 echo

@@ -11,7 +11,7 @@ Use [script/doctor-template](/Users/matheuspuppe/Desktop/Projetos/rails-harness/
 ## Uso
 
 ```bash
-script/doctor-template <target-dir> [template-name]
+script/doctor-template <target-dir> [template-name] [--json]
 ```
 
 Exemplos:
@@ -28,6 +28,8 @@ script/doctor-template ../my-rails-app rails-modular-monolith
 - checa permissao executavel dos scripts centrais
 - roda `script/check_harness` e `script/check_architecture` do app alvo
 - imprime `warnings` quando a estrutura parece incompleta, mas nao necessariamente invalida
+
+Com `--json`, imprime um objeto JSON com `result`, `warnings`, `failures` e `template`.
 
 ## Quando usar
 

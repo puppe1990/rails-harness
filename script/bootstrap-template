@@ -65,7 +65,7 @@ if [ ! -d "$TARGET_DIR" ]; then
 fi
 
 if [ ! -f "$TARGET_DIR/Gemfile" ]; then
-  echo "Warning: target directory does not look like a Rails app root because Gemfile was not found."
+  echo "Warning: target directory does not look like a Rails app root because Gemfile was not found." >&2
 fi
 
 TEMPLATE_FILES=()

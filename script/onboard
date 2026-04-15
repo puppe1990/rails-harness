@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+usage() {
+  cat <<'EOF'
+Usage:
+  script/onboard <target-dir> [template-name] [--force]
+
+Examples:
+  script/onboard /path/to/rails-app
+  script/onboard /path/to/rails-app rails-api-crud
+  script/onboard /path/to/rails-app rails-modular-monolith --force
+
+Behavior:
+  - audits the target app to detect the best-fit template when none is provided
+  - bootstraps the selected template into the target app
+  - runs doctor checks after installation
+EOF
+}
+
+if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ] || [ "$#" -lt 1 ]; then
+  usage
+  exit 0
+fi
+
+TARGET_DIR="$1"
+DECLARED_TEMPLATE="${2:-}"
+FORCE="${3:-}"
+
+if [ "$DECLARED_TEMPLATE" = "--force" ]; then
+  DECLARED_TEMPLATE=""
+  FORCE="--force"
+fi
+
+template_name="$DECLARED_TEMPLATE"
+if [ -z "$template_name" ]; then
+  audit_json="$("$ROOT_DIR/script/audit-template-fit" "$TARGET_DIR" --json)"
+  template_name="$(printf '%s' "$audit_json" | jq -r '.recommended_template')"
+  echo "Selected template from audit: $template_name"
+else
+  echo "Using declared template: $template_name"
+fi
+
+"$ROOT_DIR/script/bootstrap-template" "$template_name" "$TARGET_DIR" "${FORCE:-}"
+doctor_json="$("$ROOT_DIR/script/doctor-template" "$TARGET_DIR" "$template_name" --json)"
+doctor_result="$(printf '%s' "$doctor_json" | jq -r '.result')"
+
+echo "Onboarding result: $doctor_result"
+if [ "$doctor_result" != "PASS" ]; then
+  printf '%s\n' "$doctor_json"
+  exit 1
+fi

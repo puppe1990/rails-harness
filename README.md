@@ -19,6 +19,7 @@ O foco aqui nao e gerar um app Rails completo, e sim reunir:
 - [docs/bootstrap-template.md](./docs/bootstrap-template.md): como instalar um template em um app Rails real
 - [docs/audit-template-fit.md](./docs/audit-template-fit.md): como auditar um app Rails e sugerir o template
 - [docs/doctor-template.md](./docs/doctor-template.md): como validar se um app bootstrapado continua coerente com o harness
+- [CONTRIBUTING.md](./CONTRIBUTING.md): como contribuir com templates e scripts
 
 ### Templates
 
@@ -66,6 +67,13 @@ Ou valide um app bootstrapado:
 ```bash
 chmod +x script/doctor-template
 script/doctor-template ../my-rails-app
+```
+
+Ou execute tudo de uma vez:
+
+```bash
+chmod +x script/onboard
+script/onboard ../my-rails-app
 ```
 
 ## Onboarding rapido

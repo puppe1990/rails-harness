@@ -11,7 +11,7 @@ Use [script/audit-template-fit](/Users/matheuspuppe/Desktop/Projetos/rails-harne
 ## Uso
 
 ```bash
-script/audit-template-fit <target-dir>
+script/audit-template-fit <target-dir> [--json]
 ```
 
 Exemplos:
@@ -36,6 +36,8 @@ O script imprime:
 - template recomendado
 - sinais que levaram a recomendacao
 - proximo comando sugerido com `script/bootstrap-template`
+
+Com `--json`, imprime um objeto JSON com esses mesmos campos.
 
 ## Observacao
 

@@ -4,7 +4,7 @@ set -euo pipefail
 usage() {
   cat <<'EOF'
 Usage:
-  script/audit-template-fit <target-dir>
+  script/audit-template-fit <target-dir> [--json]
 
 Example:
   script/audit-template-fit /path/to/rails-app
@@ -28,6 +28,7 @@ fi
 
 TARGET_DIR="$1"
 TARGET_DIR="$(cd "$TARGET_DIR" && pwd)"
+OUTPUT_JSON="${2:-}"
 
 if [ ! -d "$TARGET_DIR" ]; then
   echo "Target directory not found: $TARGET_DIR"
@@ -35,7 +36,7 @@ if [ ! -d "$TARGET_DIR" ]; then
 fi
 
 if [ ! -f "$TARGET_DIR/Gemfile" ]; then
-  echo "Warning: target directory does not look like a Rails app root because Gemfile was not found."
+  echo "Warning: target directory does not look like a Rails app root because Gemfile was not found." >&2
 fi
 
 crud_score=0
@@ -153,6 +154,50 @@ if [ "$sidekiq_score" -gt "$best_score" ]; then
   best_score=$sidekiq_score
 fi
 
+reasons=()
+case "$recommendation" in
+  rails-api-crud)
+    if [ "${#crud_reasons[@]}" -eq 0 ]; then
+      reasons=("defaulted to CRUD because stronger topology signals were not detected")
+    else
+      reasons=("${crud_reasons[@]}")
+    fi
+    ;;
+  rails-modular-monolith)
+    reasons=("${modular_reasons[@]}")
+    ;;
+  rails-sidekiq-event-processing)
+    reasons=("${sidekiq_reasons[@]}")
+    ;;
+esac
+
+if [ "$OUTPUT_JSON" = "--json" ]; then
+  python3 - "$TARGET_DIR" "$crud_score" "$modular_score" "$sidekiq_score" "$recommendation" "${reasons[@]}" <<'PY'
+import json
+import sys
+
+target = sys.argv[1]
+crud_score = int(sys.argv[2])
+modular_score = int(sys.argv[3])
+sidekiq_score = int(sys.argv[4])
+recommendation = sys.argv[5]
+reasons = sys.argv[6:]
+
+print(json.dumps({
+    "target_dir": target,
+    "scores": {
+        "rails-api-crud": crud_score,
+        "rails-modular-monolith": modular_score,
+        "rails-sidekiq-event-processing": sidekiq_score,
+    },
+    "recommended_template": recommendation,
+    "reasons": reasons,
+    "suggested_next_step": f"script/bootstrap-template {recommendation} {target}",
+}, indent=2))
+PY
+  exit 0
+fi
+
 echo "Audit target: $TARGET_DIR"
 echo
 echo "Scores:"
@@ -163,23 +208,7 @@ echo
 echo "Recommended template: $recommendation"
 echo
 echo "Reasons:"
-
-case "$recommendation" in
-  rails-api-crud)
-    if [ "${#crud_reasons[@]}" -eq 0 ]; then
-      echo "  - defaulted to CRUD because stronger topology signals were not detected"
-    else
-      printf '  - %s\n' "${crud_reasons[@]}"
-    fi
-    ;;
-  rails-modular-monolith)
-    printf '  - %s\n' "${modular_reasons[@]}"
-    ;;
-  rails-sidekiq-event-processing)
-    printf '  - %s\n' "${sidekiq_reasons[@]}"
-    ;;
-esac
-
+printf '  - %s\n' "${reasons[@]}"
 echo
 echo "Suggested next step:"
 echo "  script/bootstrap-template $recommendation $TARGET_DIR"
