@@ -16,9 +16,13 @@ O foco aqui nao e gerar um app Rails completo, e sim reunir:
 - [docs/harness-maturity.md](./docs/harness-maturity.md): progressao de maturidade do harness
 - [docs/architecture/README.md](./docs/architecture/README.md): evolucao arquitetural `v1 -> v8`
 
-### Template
+### Templates
 
-O diretorio [template](./template/README.md) contem um pacote inicial com:
+O diretorio [template](./template/README.md) contem o template especializado para `Rails API CRUD`.
+
+O diretorio [template-rails-modular-monolith](./template-rails-modular-monolith/README.md) contem o template especializado para `Rails modular monolith`.
+
+Os templates trazem:
 
 - `AGENTS.md` para guiar coding agents
 - `docs/` com regras operacionais
@@ -32,7 +36,7 @@ Se voce quer aplicar isso em um app Rails real:
 
 1. leia [docs/rails-harness.md](./docs/rails-harness.md)
 2. escolha o nivel de maturidade desejado em [docs/harness-maturity.md](./docs/harness-maturity.md)
-3. copie o conteudo de [template](./template/README.md) para a raiz do app
+3. escolha a topologia adequada e copie o template correspondente para a raiz do app
 4. adapte `AGENTS.md`, `docs/` e `script/` para as convencoes do time
 5. rode os checks locais do template
 

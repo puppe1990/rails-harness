@@ -156,6 +156,6 @@ Fica menos harnessable quando:
 - os tests sao lentos ou frageis
 - a arquitetura real diverge da documentada
 
-## O template deste repositorio
+## Os templates deste repositorio
 
-O diretorio [template](/Users/matheuspuppe/Desktop/Projetos/rails-harness/template/README.md) materializa esse modelo em uma estrutura semi-executavel para ser copiada ou adaptada em um app Rails real.
+Os diretorios [template](/Users/matheuspuppe/Desktop/Projetos/rails-harness/template/README.md) e [template-rails-modular-monolith](/Users/matheuspuppe/Desktop/Projetos/rails-harness/template-rails-modular-monolith/README.md) materializam esse modelo em estruturas semi-executaveis para topologias diferentes de apps Rails reais.

@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT_DIR"
+
+if ! command -v rg >/dev/null 2>&1; then
+  echo "ripgrep (rg) is required for script/check_architecture"
+  exit 1
+fi
+
+violations=0
+
+echo "==> checking controllers for query logic"
+if [ -d "app/controllers" ]; then
+  if rg -n '\.(where|joins|left_joins|pluck|find_by|find_by!|group|order|includes)\(' app/controllers; then
+    echo "Controllers should delegate query-heavy work to the owning domain."
+    violations=1
+  fi
+fi
+
+echo "==> checking domain models for external IO"
+if [ -d "app/domains" ]; then
+  if rg -n 'Net::HTTP|Faraday|HTTParty|RestClient|HTTP\.|Excon|Typhoeus' app/domains; then
+    echo "Domain code appears to contain external IO. Move it to an adapter or infrastructure layer."
+    violations=1
+  fi
+fi
+
+echo "==> checking for direct cross-domain constants"
+if [ -d "app/domains/catalog" ] && [ -d "app/domains/orders" ]; then
+  if rg -n 'Orders::' app/domains/catalog; then
+    echo "Catalog should not depend directly on Orders."
+    violations=1
+  fi
+
+  if rg -n 'Catalog::' app/domains/orders; then
+    echo "Orders depends on Catalog directly. This is allowed only when explicit and reviewed."
+  fi
+fi
+
+if [ "$violations" -ne 0 ]; then
+  echo "Architecture checks failed"
+  exit 1
+fi
+
+echo "Architecture checks passed"

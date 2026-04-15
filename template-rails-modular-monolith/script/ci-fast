@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT_DIR"
+
+maybe_bundle_exec() {
+  if [ -f "Gemfile" ]; then
+    bundle exec "$@"
+  else
+    "$@"
+  fi
+}
+
+echo "==> check_harness"
+script/check_harness
+
+if [ -f ".rubocop.yml" ] || grep -q "rubocop" Gemfile.lock 2>/dev/null || grep -q "rubocop" Gemfile 2>/dev/null; then
+  echo "==> rubocop"
+  maybe_bundle_exec rubocop
+else
+  echo "==> rubocop skipped"
+fi
+
+echo "==> check_architecture"
+script/check_architecture
+
+if [ -d "spec/architecture" ] && (grep -q "rspec-rails" Gemfile.lock 2>/dev/null || grep -q "rspec-rails" Gemfile 2>/dev/null); then
+  echo "==> rspec architecture"
+  maybe_bundle_exec rspec spec/architecture
+else
+  echo "==> rspec architecture skipped"
+fi
