@@ -34,6 +34,18 @@ script/check_harness
 script/ci-fast
 ```
 
+## Dependencias esperadas
+
+O template funciona melhor quando o app possui:
+
+- `rspec-rails`
+- `rubocop`
+- `brakeman`
+- `bundler-audit`
+- `simplecov` opcional
+
+Os scripts fazem deteccao defensiva e pulam checks ausentes, mas o valor real do harness cresce quando essas ferramentas existem de fato.
+
 ## Filosofia
 
 Neste tipo de app, o principal risco nao e apenas CRUD ruim. E side effect escondido, job com regra demais, idempotencia fraca e falta de clareza entre comando, evento e processamento assincrono.

@@ -63,6 +63,7 @@ Exemplos:
 
 - `bundle exec rubocop`
 - `bundle exec brakeman`
+- `bundle exec bundle-audit check --update`
 - `bundle exec rspec`
 - checks estruturais em `spec/architecture`
 - scripts que detectam queries em controllers

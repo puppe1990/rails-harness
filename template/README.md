@@ -55,6 +55,7 @@ O template funciona melhor quando o app possui:
 - `rspec-rails`
 - `rubocop`
 - `brakeman`
+- `bundler-audit`
 - `simplecov` opcional
 
 Os scripts fazem deteccao defensiva e pulam checks ausentes, mas o valor real do harness cresce quando essas ferramentas existem de fato.

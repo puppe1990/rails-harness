@@ -36,6 +36,18 @@ script/check_harness
 script/ci-fast
 ```
 
+## Dependencias esperadas
+
+O template funciona melhor quando o app possui:
+
+- `rspec-rails`
+- `rubocop`
+- `brakeman`
+- `bundler-audit`
+- `simplecov` opcional
+
+Os scripts fazem deteccao defensiva e pulam checks ausentes, mas o valor real do harness cresce quando essas ferramentas existem de fato.
+
 ## Filosofia
 
 O ganho principal aqui nao e separar por tipo tecnico, e sim por contexto de negocio. O harness serve para impedir que o monolito volte a virar uma massa unica e opaca.

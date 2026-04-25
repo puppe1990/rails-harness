@@ -83,4 +83,61 @@ touch "$tmpdir_onboard/app/Gemfile"
 onboard_output="$(script/onboard "$tmpdir_onboard/app" rails-api-crud)"
 assert_contains "$onboard_output" "Onboarding result: PASS" "onboard should finish successfully"
 
+echo "==> ci scripts should run security checks and detect coverage hooks consistently"
+tmpdir_ci="$(mktemp -d /tmp/rails-harness-ci.XXXXXX)"
+mkdir -p "$tmpdir_ci/bin"
+
+cat > "$tmpdir_ci/bin/bundle" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+echo "bundle $*" >> "${BUNDLE_LOG:?}"
+exit 0
+EOF
+chmod +x "$tmpdir_ci/bin/bundle"
+
+templates=(
+  "rails-api-crud"
+  "rails-modular-monolith"
+  "rails-sidekiq-event-processing"
+)
+
+for template_name in "${templates[@]}"; do
+  app_dir="$tmpdir_ci/$template_name"
+  mkdir -p "$app_dir"
+  touch "$app_dir/Gemfile"
+
+  script/bootstrap-template "$template_name" "$app_dir" >/dev/null
+
+  cat > "$app_dir/Gemfile" <<'EOF'
+source "https://rubygems.org"
+
+gem "rspec-rails"
+gem "rubocop"
+gem "brakeman"
+gem "bundler-audit"
+gem "simplecov"
+EOF
+
+  touch "$app_dir/.rubocop.yml" "$app_dir/.simplecov"
+
+  bundle_log="$tmpdir_ci/${template_name}.bundle.log"
+  : > "$bundle_log"
+
+  ci_fast_output="$(
+    cd "$app_dir" &&
+      PATH="$tmpdir_ci/bin:$PATH" BUNDLE_LOG="$bundle_log" ./script/ci-fast
+  )"
+  assert_contains "$ci_fast_output" "==> brakeman" "ci-fast should run brakeman for $template_name"
+  assert_contains "$ci_fast_output" "==> bundle-audit" "ci-fast should run bundle-audit for $template_name"
+  assert_contains "$(cat "$bundle_log")" "bundle exec brakeman -q" "ci-fast should invoke brakeman via bundle exec for $template_name"
+  assert_contains "$(cat "$bundle_log")" "bundle exec bundle-audit check --update" "ci-fast should invoke bundle-audit via bundle exec for $template_name"
+
+  : > "$bundle_log"
+  ci_full_output="$(
+    cd "$app_dir" &&
+      PATH="$tmpdir_ci/bin:$PATH" BUNDLE_LOG="$bundle_log" ./script/ci-full
+  )"
+  assert_contains "$ci_full_output" "==> coverage hook present" "ci-full should report SimpleCov hook for $template_name"
+done
+
 echo "All script tests passed"

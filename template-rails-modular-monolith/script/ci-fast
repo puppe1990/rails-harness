@@ -12,20 +12,39 @@ maybe_bundle_exec() {
   fi
 }
 
+has_gem() {
+  local gem_name="$1"
+  grep -q "$gem_name" Gemfile.lock 2>/dev/null || grep -q "$gem_name" Gemfile 2>/dev/null
+}
+
 echo "==> check_harness"
 script/check_harness
 
-if [ -f ".rubocop.yml" ] || grep -q "rubocop" Gemfile.lock 2>/dev/null || grep -q "rubocop" Gemfile 2>/dev/null; then
+if [ -f ".rubocop.yml" ] || has_gem "rubocop"; then
   echo "==> rubocop"
   maybe_bundle_exec rubocop
 else
   echo "==> rubocop skipped"
 fi
 
+if has_gem "brakeman"; then
+  echo "==> brakeman"
+  maybe_bundle_exec brakeman -q
+else
+  echo "==> brakeman skipped"
+fi
+
+if has_gem "bundler-audit"; then
+  echo "==> bundle-audit"
+  maybe_bundle_exec bundle-audit check --update
+else
+  echo "==> bundle-audit skipped"
+fi
+
 echo "==> check_architecture"
 script/check_architecture
 
-if [ -d "spec/architecture" ] && (grep -q "rspec-rails" Gemfile.lock 2>/dev/null || grep -q "rspec-rails" Gemfile 2>/dev/null); then
+if [ -d "spec/architecture" ] && has_gem "rspec-rails"; then
   echo "==> rspec architecture"
   maybe_bundle_exec rspec spec/architecture
 else

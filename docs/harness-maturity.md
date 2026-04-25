@@ -19,6 +19,7 @@ Harness minimo:
 - `rubocop`
 - `rspec` basico
 - `brakeman`
+- `bundler-audit`
 - `docs/architecture.md`
 
 Risco dominante:
